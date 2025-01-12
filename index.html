@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Birthday Wishes</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:wght@700&display=swap');
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: 'Bodoni Moda', serif;
+      position: relative;
+      background: url('img1.png') no-repeat center center fixed, 
+                  url('img2.png') no-repeat top left fixed, 
+                  url('img3.png') no-repeat bottom right fixed;
+      background-size: contain;
+    }
+    canvas {
+      display: block;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 3;
+    }
+    .content {
+      position: relative;
+      z-index: 3;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      text-align: center;
+      color: white;
+    }
+    .birthday-words {
+      font-size: 3rem;
+      font-weight: bold;
+      text-align: center;
+      animation: dropText 4s ease-out forwards;
+      opacity: 0;
+    }
+    @keyframes dropText {
+      0% {
+        transform: translateY(-100%);
+        opacity: 0;
+      }
+      100% {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+    .quotes {
+      margin-top: 20px;
+      font-size: 1.5rem;
+      font-style: italic;
+      color: #FFD700;
+      animation: slideIn 4.5s ease-out forwards;
+      opacity: 0;
+    }
+    @keyframes slideIn {
+      0% {
+        transform: translateX(-100%);
+        opacity: 0;
+      }
+      100% {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+    .play-button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 1rem;
+      color: white;
+      background-color: #FF4500;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      z-index: 5;
+    }
+    .play-button:hover {
+      background-color: #FF6347;
+    }
+    @media (max-width: 768px) {
+      .birthday-words {
+        font-size: 2rem;
+      }
+      .quotes {
+        font-size: 1.2rem;
+      }
+    }
+    @media (max-width: 480px) {
+      .birthday-words {
+        font-size: 1.5rem;
+      }
+      .quotes {
+        font-size: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  
+  <!-- Canvas for Fireworks -->
+  <canvas id="birthday"></canvas>
+  
+  <!-- Content Section -->
+  <div class="content">
+    <div class="birthday-words">Happy Birthday To You!</div>
+    <div class="quotes">
+      <span>"Cheers to another year of friendship! Have a great birthday!"</span>
+      <br>
+      <span>"Happy birthday to the person with the best-looking best friend."</span>
+      <br>
+      <span>"Cheers to another year of wonderful memories!"</span>
+    </div>
+    <button class="play-button" id="play-button">Pause Music</button>
+  </div>
+
+  <!-- MP3 Audio -->
+  <audio id="bg-music" loop autoplay>
+    <source src="happy-birthday-258264.mp3" type="audio/mpeg">
+    Your browser does not support the audio element.
+  </audio>
+
+  <script>
+    // Fireworks Logic
+    const PI2 = Math.PI * 2;
+    const random = (min, max) => Math.random() * (max - min + 1) + min | 0;
+    const timestamp = () => new Date().getTime();
+
+    class Birthday {
+      constructor() {
+        this.resize();
+        this.fireworks = [];
+        this.counter = 0;
+      }
+
+      resize() {
+        this.width = canvas.width = window.innerWidth;
+        this.height = canvas.height = window.innerHeight;
+        this.spawnA = this.width / 4;
+        this.spawnB = this.width * 3 / 4;
+        this.spawnC = this.height * 0.1;
+        this.spawnD = this.height * 0.5;
+      }
+
+      onClick(evt) {
+        let x = evt.clientX || evt.touches && evt.touches[0].pageX;
+        let y = evt.clientY || evt.touches && evt.touches[0].pageY;
+
+        let count = random(3, 5);
+        for (let i = 0; i < count; i++) {
+          this.fireworks.push(new Firework(
+            random(this.spawnA, this.spawnB),
+            this.height,
+            x,
+            y,
+            random(0, 360),
+            random(30, 110)
+          ));
+        }
+        this.counter = -1;
+      }
+
+      update(delta) {
+        ctx.globalCompositeOperation = 'hard-light';
+        ctx.fillStyle = `rgba(20,20,20,${7 * delta})`;
+        ctx.fillRect(0, 0, this.width, this.height);
+
+        ctx.globalCompositeOperation = 'lighter';
+        for (let firework of this.fireworks) firework.update(delta);
+
+        this.counter += delta * 3;
+        if (this.counter >= 1) {
+          this.fireworks.push(new Firework(
+            random(this.spawnA, this.spawnB),
+            this.height,
+            random(0, this.width),
+            random(this.spawnC, this.spawnD),
+            random(0, 360),
+            random(30, 110)
+          ));
+          this.counter = 0;
+        }
+
+        if (this.fireworks.length > 1000) {
+          this.fireworks = this.fireworks.filter(firework => !firework.dead);
+        }
+      }
+    }
+
+    class Firework {
+      constructor(x, y, targetX, targetY, shade, offsprings) {
+        this.dead = false;
+        this.offsprings = offsprings;
+
+        this.x = x;
+        this.y = y;
+        this.targetX = targetX;
+        this.targetY = targetY;
+
+        this.shade = shade;
+        this.history = [];
+      }
+
+      update(delta) {
+        if (this.dead) return;
+
+        let xDiff = this.targetX - this.x;
+        let yDiff = this.targetY - this.y;
+
+        if (Math.abs(xDiff) > 3 || Math.abs(yDiff) > 3) {
+          this.x += xDiff * 2 * delta;
+          this.y += yDiff * 2 * delta;
+
+          this.history.push({ x: this.x, y: this.y });
+          if (this.history.length > 20) this.history.shift();
+        } else {
+          if (this.offsprings && !this.madeChilds) {
+            let babies = this.offsprings / 2;
+            for (let i = 0; i < babies; i++) {
+              let targetX = this.x + this.offsprings * Math.cos(PI2 * i / babies) | 0;
+              let targetY = this.y + this.offsprings * Math.sin(PI2 * i / babies) | 0;
+              birthday.fireworks.push(new Firework(this.x, this.y, targetX, targetY, this.shade, 0));
+            }
+          }
+          this.madeChilds = true;
+          this.history.shift();
+        }
+
+        if (this.history.length === 0) this.dead = true;
+        else {
+          ctx.beginPath();
+          ctx.fillStyle = `hsl(${this.shade},100%,50%)`;
+          ctx.arc(this.x, this.y, 1, 0, PI2, false);
+          ctx.fill();
+        }
+      }
+    }
+
+    let canvas = document.getElementById('birthday');
+    let ctx = canvas.getContext('2d');
+    let birthday = new Birthday();
+    let then = timestamp();
+
+    window.onresize = () => birthday.resize();
+    document.onclick = evt => birthday.onClick(evt);
+    document.ontouchstart = evt => birthday.onClick(evt);
+
+    (function loop() {
+      requestAnimationFrame(loop);
+      let now = timestamp();
+      let delta = now - then;
+      then = now;
+      birthday.update(delta / 1000);
+    })();
+
+    // Play Button Logic
+    const playButton = document.getElementById('play-button');
+    const bgMusic = document.getElementById('bg-music');
+
+    playButton.addEventListener('click', () => {
+      if (bgMusic.paused) {
+        bgMusic.play();
+        playButton.textContent = 'Pause Music';
+      } else {
+        bgMusic.pause();
+        playButton.textContent = 'Play Music';
+      }
+    });
+  </script>
+</body>
+</html>
+
